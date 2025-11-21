@@ -1,0 +1,35 @@
+[project]
+name = "sarif-cli"
+version = "0.1.0"
+description = "간소화된 SAST CLI 도구"
+authors = [
+    {name = "Team Atlanta", email = "atlanta@team.com"}
+]
+readme = "README.md"
+requires-python = ">=3.10,<3.14"
+
+dependencies = [
+    "sarif",
+    "typer>=0.15.0",
+    "rich>=13.9.0",
+    "pydantic>=2.10.0",
+    "pydantic-settings>=2.9.0",
+    "loguru>=0.7.3",
+    "langchain>=0.3.25",
+    "langchain-openai>=0.3.16",
+    "psutil>=7.0.0",
+    "requests>=2.32.0",
+]
+
+[tool.uv.sources]
+sarif = { path = "../crs-sarif/sarif", editable = true }
+
+[project.scripts]
+sarif-cli = "sarif_cli.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["sarif_cli"]
