@@ -48,6 +48,11 @@ def main(
         "--enable-llm",
         help="LLM 검증 활성화",
     ),
+    enable_aux: bool = typer.Option(
+        False,
+        "--enable-aux",
+        help="Aux 분석(Reachability) 활성화",
+    ),
     config_file: Optional[Path] = typer.Option(
         None,
         "--config",
@@ -77,17 +82,26 @@ def main(
         raise typer.Exit(1)
     
     # 설정 로드 (CLI 인자 > 환경 변수 > .env 파일)
-    settings = load_settings(
+    settings_obj = load_settings(
         enable_llm=enable_llm,
         llm_url=llm_url,
         llm_key=llm_key,
     )
     
+    # Aux 설정 업데이트
+    from sarif_cli import settings as global_settings
+    if enable_aux:
+        global_settings.ENABLE_AUX_ANALYSIS = True
+    
     console.print(f"[bold green]🔍 SAST 분석 시작[/bold green]")
     console.print(f"입력: {input_dir}")
     console.print(f"출력: {output_dir}")
-    if settings.enable_llm:
-        console.print(f"[cyan]LLM: 활성화 (URL: {settings.llm_url or 'Not configured'})[/cyan]")
+    if settings_obj.enable_llm:
+        console.print(f"[cyan]LLM: 활성화 (URL: {settings_obj.llm_url or 'Not configured'})[/cyan]")
+        if global_settings.ENABLE_AUX_ANALYSIS:
+            console.print(f"[cyan]Aux 분석: 활성화[/cyan]")
+        else:
+            console.print(f"[dim]Aux 분석: 비활성화[/dim]")
     else:
         console.print(f"[dim]LLM: 비활성화[/dim]")
     
@@ -106,24 +120,40 @@ def main(
     
     # 4. LLM 검증 (설정에 따라)
     patches_map = {}
-    if settings.enable_llm:
+    if settings_obj.enable_llm:
         console.print("\n[yellow]🤖 LLM 검증 및 패치 생성 중...[/yellow]")
-        from sarif_cli.llm_verifier import verify_and_generate_patch, read_source_file
+        from sarif_cli.llm_verifier import verify_and_generate_patch
         
         for idx, vuln in enumerate(results):
-            # 소스 파일 읽기
-            source_code = read_source_file(vuln.file_path)
-            if source_code:
-                # LLM 검증 및 패치 생성
-                patch_result = verify_and_generate_patch(
-                    vuln, 
-                    source_code, 
-                    settings.llm_url, 
-                    settings.llm_api_key
-                )
-                if patch_result:
-                    patches_map[idx] = patch_result
-                    console.print(f"  ✓ {vuln.file_path.name}:{vuln.line} - {patch_result.explanation[:50]}...")
+            # 언어 추론 (확장자 기반)
+            ext = vuln.file_path.suffix.lower()
+            lang = "unknown"
+            if ext in [".c", ".cpp", ".h", ".hpp"]:
+                lang = "c" if ext == ".c" else "cpp"
+            elif ext in [".java"]:
+                lang = "java"
+            
+            # LLM 검증 및 패치 생성
+            patch_result_dict = verify_and_generate_patch(
+                vulnerability=vuln,
+                project_dir=input_dir,
+                language=lang,
+                llm_url=settings_obj.llm_url,
+                api_key=settings_obj.llm_api_key
+            )
+            
+            # Dict를 PatchResult 객체로 변환 (호환성 유지)
+            from sarif_cli.llm_verifier import PatchResult
+            patch_result = PatchResult(
+                is_valid=patch_result_dict.get("is_valid", False),
+                confidence=patch_result_dict.get("confidence", 0.0),
+                patch_code=patch_result_dict.get("patch_code"),
+                explanation=patch_result_dict.get("explanation", "")
+            )
+            
+            if patch_result.is_valid:
+                patches_map[idx] = patch_result
+                console.print(f"  ✓ {vuln.file_path.name}:{vuln.line} - {patch_result.explanation[:50]}...")
         
         console.print(f"패치 생성 완료: {len(patches_map)}개")
     

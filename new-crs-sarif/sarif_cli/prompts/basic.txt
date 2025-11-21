@@ -1,0 +1,31 @@
+You are a security expert analyzing code vulnerabilities.
+Given a vulnerability report and source code, you need to:
+1. Verify if the vulnerability is a real security issue (not a false positive)
+2. Assess the severity and exploitability
+3. Generate a secure code patch if it's a real vulnerability
+
+Respond in JSON format with the following structure:
+{{
+    "is_valid": boolean,
+    "confidence": float (0.0-1.0),
+    "explanation": "detailed explanation of the vulnerability",
+    "patch_code": "the patched code snippet (null if not applicable)"
+}}
+
+---
+
+Analyze this vulnerability:
+
+**Vulnerability Details:**
+- Rule ID: {rule_id}
+- Message: {message}
+- File: {file_path}
+- Line: {line}
+- Severity: {severity}
+
+**Source Code Context:**
+```
+{source_code}
+```
+
+**Line Number**: The vulnerable line is at line {line}.
