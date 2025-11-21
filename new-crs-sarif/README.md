@@ -92,5 +92,28 @@ output_dir/
 - CPG (Code Property Graph) 기반 분석
 - Buffer Overflow, Use-After-Free, NULL Pointer Dereference 등 탐지
 
+### SpotBugs (Java)
+- SpotBugs를 사용하여 Java 코드의 버그를 탐지합니다.
+- 아래 스크립트를 실행하여 SpotBugs를 설치해야 합니다:
+  ```bash
+  ./install_spotbugs.sh
+  ```
+- 분석 시 자동으로 프로젝트 내의 Java 소스 코드를 컴파일합니다. (`javac` 필요)
+
 ### Fallback 모드
 Joern이 설치되지 않았거나 실패 시 자동으로 fallback 모드로 전환됩니다.
+
+## Aux 분석기 (선택 사항)
+
+Aux 분석기는 더 정밀한 도달 가능성(Reachability) 분석을 제공하여 LLM 검증의 정확도를 높입니다.
+
+### 기능
+- **Reachability Analysis**: 취약점이 외부 입력으로부터 실제로 도달 가능한지 분석
+- **Dynamic Prompts**: 분석 결과에 따라 LLM 프롬프트를 동적으로 선택 (`basic` vs `aux_enhanced`)
+
+### 활성화 방법
+CLI 옵션 `--enable-aux`를 사용하거나 환경 변수 `ENABLE_AUX_ANALYSIS=true`를 설정하세요.
+
+```bash
+sarif-cli -i ./project -o ./out --enable-llm --enable-aux
+```

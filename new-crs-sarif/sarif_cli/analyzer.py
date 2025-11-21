@@ -27,119 +27,68 @@ class VulnerabilityResult:
         self.severity = severity
 
 
-def analyze_c_cpp(project_dir: Path) -> List[VulnerabilityResult]:
+def analyze_with_codeql(project_dir: Path, language: str) -> List[VulnerabilityResult]:
     """
-    C/C++ 코드 분석 (Joern 활용)
+    CodeQL을 사용하여 코드 분석
     
     Args:
         project_dir: 프로젝트 디렉토리
+        language: 분석할 언어
     
     Returns:
         취약점 결과 리스트
     """
-    logger.info("C/C++ 분석 시작 (Joern 사용)")
-    results = []
+    logger.info(f"CodeQL 분석 시작 ({language})")
     
     try:
-        from sarif_cli.joern_wrapper import JoernAnalyzer
+        from sarif_cli.codeql.wrapper import CodeQLWrapper
         
-        # Joern 분석기 초기화
-        analyzer = JoernAnalyzer(project_dir)
+        codeql_wrapper = CodeQLWrapper()
         
-        # CPG 빌드
-        cpg_path = analyzer.build_cpg()
-        
-        if cpg_path:
-            # Joern 서버 시작
-            if analyzer.start_server():
-                # 취약점 쿼리 실행
-                vulnerabilities = analyzer.query_vulnerabilities()
-                
-                # 결과 변환
-                for vuln in vulnerabilities:
-                    # 파일 경로 처리
-                    file_name = vuln.get("file", "unknown")
-                    if file_name != "unknown":
-                        file_path = project_dir / file_name
-                    else:
-                        # Fallback: 첫 번째 C 파일 사용
-                        c_files = get_files_by_language(project_dir, "c")
-                        file_path = c_files[0] if c_files else project_dir / "unknown"
-                    
-                    results.append(
-                        VulnerabilityResult(
-                            file_path=file_path,
-                            line=vuln.get("line", 0),
-                            column=1,
-                            rule_id=vuln.get("rule_id", "CWE-Unknown"),
-                            message=f"{vuln.get('rule_name', 'Vulnerability')} in {vuln.get('function', 'unknown')}",
-                            severity="error",
-                        )
-                    )
-                
-                # 서버 중지
-                analyzer.stop_server()
-                
-                logger.info(f"C/C++ 분석 완료: {len(results)}개 발견")
-            else:
-                logger.warning("Joern 서버 시작 실패, fallback 사용")
-                raise Exception("Joern server failed to start")
-        else:
-            logger.warning("CPG 빌드 실패, fallback 사용")
-            raise Exception("CPG build failed")
-        
-    except Exception as e:
-        logger.warning(f"Joern 분석 실패, fallback 사용: {e}")
-        # Fallback: 간단한 패턴 매칭
-        c_files = get_files_by_language(project_dir, "c")
-        cpp_files = get_files_by_language(project_dir, "cpp")
-        
-        for file in (c_files + cpp_files)[:3]:  # 최대 3개만
-            results.append(
-                VulnerabilityResult(
-                    file_path=file,
-                    line=10,
-                    column=5,
-                    rule_id="CWE-119",
-                    message="Potential buffer overflow detected (fallback mode)",
-                    severity="warning",
-                )
-            )
-    
-    return results
+        # TODO: This is a temporary solution for simple projects.
+        # A more robust solution should detect the build system (e.g., make, maven, gradle).
+        build_command = None
+        if language == "java":
+            java_files = list(project_dir.rglob("*.java"))
+            if java_files:
+                build_command = "javac " + " ".join([str(f.relative_to(project_dir)) for f in java_files])
+        elif language in ["c", "cpp"]:
+            c_files = list(project_dir.rglob("*.c"))
+            cpp_files = list(project_dir.rglob("*.cpp"))
+            if c_files or cpp_files:
+                compiler = "g++" if cpp_files else "gcc"
+                # For simple C/C++ files, create an executable to ensure the build command succeeds and CodeQL can trace it.
+                build_command = f"{compiler} " + " ".join([str(f.relative_to(project_dir)) for f in c_files + cpp_files]) + " -o example"
 
-
-def analyze_java(project_dir: Path) -> List[VulnerabilityResult]:
-    """
-    Java 코드 분석 (SootUp 등 활용)
-    
-    Args:
-        project_dir: 프로젝트 디렉토리
-    
-    Returns:
-        취약점 결과 리스트
-    """
-    logger.info("Java 분석 시작")
-    results = []
-    
-    # TODO: 실제 SootUp 통합
-    java_files = get_files_by_language(project_dir, "java")
-    
-    for file in java_files:
-        # 데모: SQL 인젝션 의심
-        results.append(
-            VulnerabilityResult(
-                file_path=file,
-                line=25,
-                column=12,
-                rule_id="CWE-89",
-                message="Potential SQL injection vulnerability",
-                severity="error",
-            )
+        raw_results = codeql_wrapper.analyze(
+            project_dir=project_dir,
+            language=language,
+            build_command=build_command,
         )
-    
-    logger.info(f"Java 분석 완료: {len(results)}개 발견")
-    return results
+        
+        results = []
+        for r in raw_results:
+            # Try to construct a relative path to the project
+            try:
+                file_path = Path(r["file"]).relative_to(project_dir.parent)
+            except ValueError:
+                file_path = Path(r["file"])
+
+            results.append(VulnerabilityResult(
+                file_path=file_path,
+                line=r["line"],
+                column=1,
+                rule_id=r["rule_id"],
+                message=f"{r['rule_name']}: {r['message']}",
+                severity=r["severity"],
+            ))
+            
+        logger.info(f"CodeQL 분석 완료 ({language}): {len(results)}개 발견")
+        return results
+
+    except Exception as e:
+        logger.exception(f"CodeQL 분석 중 오류 발생 ({language}): {e}")
+        return []
 
 
 def analyze_project(project_dir: Path, languages: Set[str]) -> List[VulnerabilityResult]:
@@ -155,19 +104,43 @@ def analyze_project(project_dir: Path, languages: Set[str]) -> List[Vulnerabilit
     """
     all_results = []
     
-    # 언어별 분석기 매핑
-    analyzers = {
-        "c": analyze_c_cpp,
-        "cpp": analyze_c_cpp,
-        "java": analyze_java,
-    }
+    # Java는 SpotBugs, C/C++는 CodeQL 사용
+    codeql_languages = {"c", "cpp"}
     
     for language in languages:
-        analyzer = analyzers.get(language)
-        if analyzer:
-            logger.info(f"{language} 분석 실행")
-            results = analyzer(project_dir)
+        if language in codeql_languages:
+            logger.info(f"{language} 분석 실행 (CodeQL 사용)")
+            results = analyze_with_codeql(project_dir, language)
             all_results.extend(results)
+        elif language == "java":
+            logger.info(f"Java 분석 실행 (SpotBugs 사용)")
+            try:
+                from sarif_cli.spotbugs_wrapper import SpotBugsWrapper
+                
+                spotbugs = SpotBugsWrapper()
+                
+                # SpotBugs는 프로젝트 디렉토리를 받아서 내부에서 컴파일과 분석을 수행
+                raw_results = spotbugs.analyze(project_dir)
+                
+                for r in raw_results:
+                    try:
+                        file_path = Path(r["file"]).relative_to(project_dir.parent)
+                    except ValueError:
+                        file_path = Path(r["file"])
+                    
+                    all_results.append(VulnerabilityResult(
+                        file_path=file_path,
+                        line=r["line"],
+                        column=1,
+                        rule_id=r["rule_id"],
+                        message=f"{r['rule_name']}: {r['message']}",
+                        severity=r["severity"],
+                    ))
+                
+                logger.info(f"SpotBugs 분석 완료: {len(raw_results)}개 발견")
+                    
+            except Exception as e:
+                logger.exception(f"SpotBugs 분석 중 오류 발생: {e}")
         else:
             logger.warning(f"{language}는 현재 지원되지 않습니다.")
     

@@ -110,36 +110,36 @@ class JoernAnalyzer:
         import json, tempfile
         vulnerabilities = []
 
-        # 쿼리 정의 (same as before)
+        # 쿼리 정의 - toJson 호출 후 println으로 출력
         buffer_overflow_query = """
-        cpg.call.name("(strcpy|memcpy|sprintf|gets).*\\").l.map { c =>
+        println(cpg.call.name("(strcpy|memcpy|sprintf|gets).*").l.map { c =>
           Map(
             "function" -> c.name,
             "file" -> c.file.name.headOption.getOrElse("unknown"),
             "line" -> c.lineNumber.headOption.getOrElse(0),
             "code" -> c.code
           )
-        }.toJson
+        }.toJson);
         """
         uaf_query = """
-        cpg.call.name("free").l.map { c =>
+        println(cpg.call.name("free").l.map { c =>
           Map(
             "function" -> "free",
             "file" -> c.file.name.headOption.getOrElse("unknown"),
             "line" -> c.lineNumber.headOption.getOrElse(0),
             "code" -> c.code
           )
-        }.toJson
+        }.toJson);
         """
         null_deref_query = """
-        cpg.call.name(".*").where(_.argument.code("NULL")).l.map { c =>
+        println(cpg.call.name(".*").where(_.argument.code("NULL")).l.map { c =>
           Map(
             "function" -> c.name,
             "file" -> c.file.name.headOption.getOrElse("unknown"),
             "line" -> c.lineNumber.headOption.getOrElse(0),
             "code" -> c.code
           )
-        }.toJson
+        }.toJson);
         """
         queries = [
             ("CWE-119", "Buffer Overflow", buffer_overflow_query),
@@ -147,18 +147,19 @@ class JoernAnalyzer:
             ("CWE-476", "NULL Pointer Dereference", null_deref_query),
         ]
 
-        # Execute each query via joern CLI with quiet flag
+        # Execute each query via joern CLI
         for rule_id, rule_name, query in queries:
             try:
                 # Write query to temporary file
                 with tempfile.NamedTemporaryFile('w', delete=False, suffix='.sc') as f:
                     f.write(query)
                     query_file = f.name
-                # Run joern CLI
+                # Run joern CLI: joern --script script.sc --nocolors cpg.bin
                 cmd = [
                     "joern",
                     "--script", query_file,
-                    "--cpg", str(self.cpg_path)
+                    "--nocolors",
+                    str(self.cpg_path)
                 ]
                 result = subprocess.run(
                     cmd,
@@ -195,7 +196,10 @@ class JoernAnalyzer:
                         logger.debug(f"JSON 파싱 실패 (무시): {line}")
                 aggregated = []
                 for data in responses:
-                    if isinstance(data, dict) and "response" in data:
+                    # Joern output via println(....toJson) returns the list directly
+                    if isinstance(data, list):
+                        aggregated.extend(data)
+                    elif isinstance(data, dict) and "response" in data:
                         aggregated.extend(data["response"])
                 logger.info(f"{rule_name}: {len(aggregated)}개 발견")
                 for item in aggregated:
