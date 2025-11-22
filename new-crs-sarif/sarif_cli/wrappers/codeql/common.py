@@ -1,10 +1,8 @@
-import importlib.resources as resources
 import os
 import subprocess
 import tempfile
 import uuid
 from pathlib import Path
-from typing import Literal
 
 from loguru import logger
 
@@ -92,7 +90,8 @@ def run(args, *, container_id: str | None = None, timeout: int | None = None):
         logger.warning("Docker execution is not supported in this version. Running locally.")
         
     runner = BaseCommander()
-    res = runner.run(command, timeout=timeout)
+    # 기본적으로 출력을 억제 (quiet=True)
+    res = runner.run(command, timeout=timeout, quiet=True)
 
     if res.returncode != 0:
         if res.returncode == -1:
@@ -107,11 +106,3 @@ def run(args, *, container_id: str | None = None, timeout: int | None = None):
     return res
 
 
-def get_query_path(language: Literal["c", "java"], name: str) -> Path:
-    with resources.path(f"sarif_cli.wrappers.codeql.ql.{language}", name) as path:
-        return path
-
-
-def get_query_content(language: Literal["c", "java"], name: str) -> str:
-    with resources.open_text(f"sarif_cli.wrappers.codeql.ql.{language}", name) as f:
-        return f.read()

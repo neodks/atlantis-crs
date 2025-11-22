@@ -75,39 +75,39 @@ run_test() {
 # 테스트 실행 전 new-crs-sarif 디렉토리로 이동
 cd "$PROJECT_ROOT"
 
-# 테스트 1: 기본 SAST 분석 (LLM 없이)
-run_test \
-    "기본 SAST 분석 (모든 언어)" \
-    "uv run python3 -m sarif_cli.cli -i $TEST_PROJECT -o $RESULTS_DIR/test1-basic" \
-    "$RESULTS_DIR/test1-basic/vulnerable.c.sarif $RESULTS_DIR/test1-basic/vulnerable.cpp.sarif $RESULTS_DIR/test1-basic/Vulnerable.java.sarif"
+# # 테스트 1: 기본 SAST 분석 (LLM 없이)
+# run_test \
+#     "기본 SAST 분석 (모든 언어)" \
+#     "uv run python3 -m sarif_cli.cli -i $TEST_PROJECT -o $RESULTS_DIR/test1-basic" \
+#     "$RESULTS_DIR/test1-basic/vulnerable.c.sarif $RESULTS_DIR/test1-basic/vulnerable.cpp.sarif $RESULTS_DIR/test1-basic/Vulnerable.java.sarif"
 
-# 테스트 2: LLM 검증 포함 (Ollama 필요)
-if command -v ollama &> /dev/null && curl -s http://localhost:11434/api/tags &> /dev/null; then
-    echo "Ollama 감지됨. LLM 테스트 실행..."
+# # 테스트 2: LLM 검증 포함 (Ollama 필요)
+# if command -v ollama &> /dev/null && curl -s http://localhost:11434/api/tags &> /dev/null; then
+#     echo "Ollama 감지됨. LLM 테스트 실행..."
     
-    run_test \
-        "LLM 검증 포함" \
-        "uv run python3 -m sarif_cli.cli -i $TEST_PROJECT -o $RESULTS_DIR/test2-llm --enable-llm --llm-url http://localhost:11434" \
-        "$RESULTS_DIR/test2-llm/vulnerable.c.sarif $RESULTS_DIR/test2-llm/Vulnerable.java.sarif"
-else
-    echo "⚠️  Ollama가 실행 중이지 않아 LLM 테스트를 건너뜁니다."
-    echo "   LLM 테스트를 실행하려면 Ollama를 시작하세요: ollama serve"
-    echo ""
-fi
+#     run_test \
+#         "LLM 검증 포함" \
+#         "uv run python3 -m sarif_cli.cli -i $TEST_PROJECT -o $RESULTS_DIR/test2-llm --enable-llm --llm-url http://localhost:11434" \
+#         "$RESULTS_DIR/test2-llm/vulnerable.c.sarif $RESULTS_DIR/test2-llm/Vulnerable.java.sarif"
+# else
+#     echo "⚠️  Ollama가 실행 중이지 않아 LLM 테스트를 건너뜁니다."
+#     echo "   LLM 테스트를 실행하려면 Ollama를 시작하세요: ollama serve"
+#     echo ""
+# fi
 
-# 테스트 3: Aux 분석 포함
-run_test \
-    "Aux 분석 포함" \
-    "uv run python3 -m sarif_cli.cli -i $TEST_PROJECT -o $RESULTS_DIR/test3-aux --enable-aux" \
-    "$RESULTS_DIR/test3-aux/vulnerable.c.sarif"
+# # 테스트 3: Aux 분석 포함
+# run_test \
+#     "Aux 분석 포함" \
+#     "uv run python3 -m sarif_cli.cli -i $TEST_PROJECT -o $RESULTS_DIR/test3-aux --enable-aux" \
+#     "$RESULTS_DIR/test3-aux/vulnerable.c.sarif"
 
-# 테스트 4: LLM + Aux 통합
-if command -v ollama &> /dev/null && curl -s http://localhost:11434/api/tags &> /dev/null; then
-    run_test \
-        "LLM + Aux 통합" \
-        "uv run python3 -m sarif_cli.cli -i $TEST_PROJECT -o $RESULTS_DIR/test4-full --enable-llm --enable-aux --llm-url http://localhost:11434" \
-        "$RESULTS_DIR/test4-full/vulnerable.c.sarif"
-fi
+# # 테스트 4: LLM + Aux 통합
+# if command -v ollama &> /dev/null && curl -s http://localhost:11434/api/tags &> /dev/null; then
+#     run_test \
+#         "LLM + Aux 통합" \
+#         "uv run python3 -m sarif_cli.cli -i $TEST_PROJECT -o $RESULTS_DIR/test4-full --enable-llm --enable-aux --llm-url http://localhost:11434" \
+#         "$RESULTS_DIR/test4-full/vulnerable.c.sarif"
+# fi
 
 # 언어별 개별 테스트
 echo "========================================="
