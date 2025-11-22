@@ -137,6 +137,8 @@ class CodeQLWrapper:
                             "rule_name": rule_name,
                             "message": message,
                             "severity": level,
+                            "tool_name": "CodeQL",
+                            "tool_metadata": run.get("tool", {}),
                         })
             logger.info(f"{len(results)}개의 결과를 파싱했습니다.")
         except json.JSONDecodeError:

@@ -114,6 +114,41 @@ def main(
     results = analyze_project(input_dir, languages)
     console.print(f"발견된 취약점 후보: {len(results)}개")
     
+    # 3.5 Aux 분석 (설정에 따라)
+    if config.ENABLE_AUX:
+        console.print("\n[yellow]🔍 Aux 분석(Reachability) 실행 중...[/yellow]")
+        from sarif_cli.core.aux_analyser import AuxAnalyser
+        
+        aux_analysers = {}
+        
+        for vuln in results:
+            # 언어 추론 (확장자 기반)
+            ext = vuln.file_path.suffix.lower()
+            lang = "unknown"
+            if ext in [".c", ".cpp", ".h", ".hpp"]:
+                lang = "c" if ext == ".c" else "cpp"
+            elif ext in [".java"]:
+                lang = "java"
+            elif ext in [".py"]:
+                lang = "python"
+            elif ext in [".js", ".jsx", ".ts", ".tsx"]:
+                lang = "javascript"
+                
+            if lang not in aux_analysers:
+                aux_analysers[lang] = AuxAnalyser(input_dir, lang)
+            
+            aux_result = aux_analysers[lang].analyze_reachability(vuln.file_path, vuln.line)
+            
+            # 결과를 VulnerabilityResult에 저장
+            vuln.aux_result = {
+                "reachable": aux_result.reachable,
+                "call_stack": aux_result.call_stack,
+                "data_flow": aux_result.data_flow
+            }
+            
+            if aux_result.reachable:
+                console.print(f"  ✓ Reachable: {vuln.file_path.name}:{vuln.line}")
+    
     # 4. LLM 검증 (설정에 따라)
     patches_map = {}
     if config.ENABLE_LLM:

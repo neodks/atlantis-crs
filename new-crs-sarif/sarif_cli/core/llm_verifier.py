@@ -52,9 +52,16 @@ def verify_and_generate_patch(
             logger.warning(f"소스 코드를 읽을 수 없음: {vulnerability.file_path}")
             return {"is_valid": False, "explanation": "Source code not found"}
         
-        # Aux 분석 실행
-        aux_analyser = AuxAnalyser(project_dir, language)
-        aux_result = aux_analyser.analyze_reachability(vulnerability.file_path, vulnerability.line)
+        # Aux 분석 실행 (이미 수행된 경우 재사용)
+        aux_result = vulnerability.aux_result
+        if not aux_result and config.ENABLE_AUX:
+            aux_analyser = AuxAnalyser(project_dir, language)
+            aux_analysis_obj = aux_analyser.analyze_reachability(vulnerability.file_path, vulnerability.line)
+            aux_result = {
+                "reachable": aux_analysis_obj.reachable,
+                "call_stack": aux_analysis_obj.call_stack,
+                "data_flow": aux_analysis_obj.data_flow
+            }
         
         # 프롬프트 선택 및 로드
         if config.ENABLE_AUX:
@@ -118,10 +125,10 @@ def verify_and_generate_patch(
         }
         
         # Aux 정보가 필요한 경우 추가
-        if config.ENABLE_AUX:
-            input_vars["aux_reachable"] = "Yes" if aux_result.reachable else "No"
-            input_vars["aux_call_stack"] = "\n".join(aux_result.call_stack)
-            input_vars["aux_data_flow"] = "\n".join(aux_result.data_flow)
+        if config.ENABLE_AUX and aux_result:
+            input_vars["aux_reachable"] = "Yes" if aux_result.get("reachable") else "No"
+            input_vars["aux_call_stack"] = "\n".join(aux_result.get("call_stack", []))
+            input_vars["aux_data_flow"] = "\n".join(aux_result.get("data_flow", []))
             
         result = chain.invoke(input_vars)
         

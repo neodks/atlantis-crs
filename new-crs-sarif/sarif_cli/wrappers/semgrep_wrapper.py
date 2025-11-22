@@ -134,7 +134,8 @@ class SemgrepAnalyzer:
                         "message": message,
                         "severity": self._map_severity(rule_info.get("severity", "5.0")),
                         "code": snippet,  # 짧은 스니펫만
-                        # 긴 메타데이터는 모두 제외
+                        "tool_name": "Semgrep",
+                        "tool_metadata": run.get("tool", {}),
                     })
         
         return vulnerabilities

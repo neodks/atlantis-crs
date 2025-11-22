@@ -210,5 +210,4 @@ __marimo__/
 
 new-crs-sarif/test-results/
 new-crs-sarif/workspace/
-crs-p3/
-crs-sarif/
+# crs-sarif/

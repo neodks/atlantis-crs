@@ -88,6 +88,8 @@ def analyze_with_codeql(project_dir: Path, language: str) -> List[VulnerabilityR
                 rule_id=r["rule_id"],
                 message=f"{r['rule_name']}: {r['message']}",
                 severity=r["severity"],
+                tool_name=r.get("tool_name", "CodeQL"),
+                tool_metadata=r.get("tool_metadata", {}),
             ))
             
         logger.info(f"CodeQL 분석 완료 ({language}): {len(results)}개 발견")
@@ -145,6 +147,8 @@ def analyze_with_joern(project_dir: Path, language: str) -> List[VulnerabilityRe
                 rule_id=r["rule_id"],
                 message=f"{r['rule_name']}: {r.get('code', '')}",
                 severity="warning",
+                tool_name=r.get("tool_name", "Joern"),
+                tool_metadata=r.get("tool_metadata", {}),
             ))
         
         logger.info(f"Joern 분석 완료 ({language}): {len(results)}개 발견")
@@ -198,6 +202,8 @@ def analyze_with_spotbugs(project_dir: Path) -> List[VulnerabilityResult]:
                 rule_id=r["rule_id"],
                 message=f"{r['rule_name']}: {r['message']}",
                 severity=r["severity"],
+                tool_name=r.get("tool_name", "SpotBugs"),
+                tool_metadata=r.get("tool_metadata", {}),
             ))
         
         logger.info(f"SpotBugs 분석 완료: {len(results)}개 발견")
@@ -246,6 +252,8 @@ def analyze_with_bandit(project_dir: Path) -> List[VulnerabilityResult]:
                 rule_id=r["rule_id"],
                 message=f"{r['rule_name']}: {r['message']}",
                 severity=r["severity"],
+                tool_name=r.get("tool_name", "Bandit"),
+                tool_metadata=r.get("tool_metadata", {}),
             ))
         
         logger.info(f"Bandit 분석 완료: {len(results)}개 발견")
@@ -295,6 +303,8 @@ def analyze_with_semgrep(project_dir: Path, language: str) -> List[Vulnerability
                 rule_id=r["rule_id"],
                 message=f"{r['rule_name']}: {r['message']}",
                 severity=r["severity"],
+                tool_name=r.get("tool_name", "Semgrep"),
+                tool_metadata=r.get("tool_metadata", {}),
             ))
         
         logger.info(f"Semgrep 분석 완료 ({language}): {len(results)}개 발견")
