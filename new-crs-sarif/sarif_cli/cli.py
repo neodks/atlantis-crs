@@ -7,9 +7,9 @@ from typing import Optional
 from rich.console import Console
 from loguru import logger
 
-from sarif_cli.detector import detect_languages
+from sarif_cli.core.detector import detect_languages
 from sarif_cli.analyzer import analyze_project
-from sarif_cli.settings import config, load_settings
+from sarif_cli.config.settings import config, load_settings
 
 app = typer.Typer()
 console = Console()
@@ -118,7 +118,7 @@ def main(
     patches_map = {}
     if config.ENABLE_LLM:
         console.print("\n[yellow]🤖 LLM 검증 및 패치 생성 중...[/yellow]")
-        from sarif_cli.llm_verifier import verify_and_generate_patch
+        from sarif_cli.core.llm_verifier import verify_and_generate_patch
         
         for idx, vuln in enumerate(results):
             # 언어 추론 (확장자 기반)
@@ -143,7 +143,7 @@ def main(
             )
             
             # Dict를 PatchResult 객체로 변환 (호환성 유지)
-            from sarif_cli.llm_verifier import PatchResult
+            from sarif_cli.core.llm_verifier import PatchResult
             patch_result = PatchResult(
                 is_valid=patch_result_dict.get("is_valid", False),
                 confidence=patch_result_dict.get("confidence", 0.0),
@@ -161,7 +161,7 @@ def main(
     console.print("\n[yellow]💾 SARIF 파일 작성 중...[/yellow]")
     
     # 파일별로 취약점과 패치를 그룹화
-    from sarif_cli.writer import write_sarif_results_with_patches
+    from sarif_cli.core.writer import write_sarif_results_with_patches
     sarif_files = write_sarif_results_with_patches(results, output_dir, patches_map)
     
     console.print(f"\n[bold green]✅ 완료! {len(sarif_files)}개 SARIF 파일 생성[/bold green]")

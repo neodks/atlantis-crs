@@ -4,13 +4,12 @@ from pathlib import Path
 from typing import List, Literal
 
 from .common import run, temporary_dir
-from .query import Query
+import os
+import shutil
+from pathlib import Path
+from typing import List, Literal
 
-CODEQL_QLPACK = """
-name: aixcc-codeql
-version: 0.0.0
-libraryPathDependencies: {}
-"""
+from .common import run, temporary_dir
 
 from loguru import logger
 
@@ -28,47 +27,6 @@ class Database(object):
 
     def run_command(self, command: str, options: List = [], post: List = []):
         run(["database", command] + options + [self.path] + post)
-
-    @staticmethod
-    def from_cpp(code, command: List | None = None):
-        compilers = ["cxx", "clang++", "g++", "cc", "clang", "gcc"]
-
-        if command is None:
-            for compiler in compilers:
-                if shutil.which(compiler) is not None:
-                    command = [compiler, "-c"]
-                    break
-
-        directory = temporary_dir()
-
-        fpath = os.path.join(directory, "source.cpp")
-        with open(fpath, "w") as f:
-            f.write(code)
-
-        command.append(fpath)
-
-        return Database.create("c", directory, command)
-
-    def query(self, ql: str, language: Literal["cpp", "java"] = "cpp"):
-        if not hasattr(self, "qldir"):
-            self.qldir = temporary_dir()
-
-            qlpack_path = os.path.join(self.qldir, "qlpack.yml")
-            with open(qlpack_path, "w") as f:
-                qlpack_text = CODEQL_QLPACK.format(
-                    "codeql-cpp" if language == "cpp" else "codeql-java"
-                )
-                f.write(qlpack_text)
-
-        query_path = os.path.join(self.qldir, "query.ql")
-
-        with open(query_path, "w") as f:
-            f.write(ql)
-
-        query = Query(query_path)
-        bqrs = query.run(database=self)
-
-        return bqrs.parse()
 
     @staticmethod
     def _check_codeql_db(path: Path):

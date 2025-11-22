@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Optional, List, Dict
 from loguru import logger
 
-from sarif_cli.settings import config
+from sarif_cli.config.settings import config
 
 @dataclass
 class AuxAnalysisResult:

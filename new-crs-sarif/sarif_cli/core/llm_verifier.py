@@ -13,8 +13,8 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 
 from sarif_cli.analyzer import VulnerabilityResult
-from sarif_cli.settings import config
-from sarif_cli.aux_analyser import AuxAnalyser
+from sarif_cli.config.settings import config
+from sarif_cli.core.aux_analyser import AuxAnalyser
 
 
 class PatchResult(BaseModel):

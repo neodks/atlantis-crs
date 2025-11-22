@@ -5,26 +5,8 @@ from pathlib import Path
 from typing import Set, List, Dict, Any
 from loguru import logger
 
-from sarif_cli.detector import get_files_by_language
-
-
-class VulnerabilityResult:
-    """취약점 분석 결과"""
-    def __init__(
-        self,
-        file_path: Path,
-        line: int,
-        column: int,
-        rule_id: str,
-        message: str,
-        severity: str = "warning",
-    ):
-        self.file_path = file_path
-        self.line = line
-        self.column = column
-        self.rule_id = rule_id
-        self.message = message
-        self.severity = severity
+from sarif_cli.core.detector import get_files_by_language
+from sarif_cli.models.vulnerability import VulnerabilityResult
 
 
 def analyze_with_codeql(project_dir: Path, language: str) -> List[VulnerabilityResult]:
@@ -41,7 +23,7 @@ def analyze_with_codeql(project_dir: Path, language: str) -> List[VulnerabilityR
     logger.info(f"CodeQL 분석 시작 ({language})")
     
     try:
-        from sarif_cli.codeql.wrapper import CodeQLWrapper
+        from sarif_cli.wrappers.codeql.wrapper import CodeQLWrapper
         
         codeql_wrapper = CodeQLWrapper()
         
@@ -130,7 +112,7 @@ def analyze_with_joern(project_dir: Path, language: str) -> List[VulnerabilityRe
     logger.info(f"Joern 분석 시작 ({language})")
     
     try:
-        from sarif_cli.joern_wrapper import JoernAnalyzer
+        from sarif_cli.wrappers.joern_wrapper import JoernAnalyzer
         
         analyzer = JoernAnalyzer(project_dir)
         
@@ -189,7 +171,7 @@ def analyze_with_spotbugs(project_dir: Path) -> List[VulnerabilityResult]:
     logger.info("SpotBugs 분석 시작")
     
     try:
-        from sarif_cli.spotbugs_wrapper import SpotBugsWrapper
+        from sarif_cli.wrappers.spotbugs_wrapper import SpotBugsWrapper
         
         spotbugs = SpotBugsWrapper()
         
@@ -242,7 +224,7 @@ def analyze_with_bandit(project_dir: Path) -> List[VulnerabilityResult]:
     logger.info("Bandit 분석 시작")
     
     try:
-        from sarif_cli.bandit_wrapper import BanditAnalyzer
+        from sarif_cli.wrappers.bandit_wrapper import BanditAnalyzer
         
         analyzer = BanditAnalyzer()
         
@@ -274,6 +256,55 @@ def analyze_with_bandit(project_dir: Path) -> List[VulnerabilityResult]:
         return []
     except Exception as e:
         logger.exception(f"Bandit 분석 중 오류 발생: {e}")
+        return []
+
+
+def analyze_with_semgrep(project_dir: Path, language: str) -> List[VulnerabilityResult]:
+    """
+    Semgrep을 사용하여 코드 분석 (경량화된 SARIF 파싱)
+    
+    Args:
+        project_dir: 프로젝트 디렉토리
+        language: 분석할 언어
+    
+    Returns:
+        취약점 결과 리스트
+    """
+    logger.info(f"Semgrep 분석 시작 ({language})")
+    
+    try:
+        from sarif_cli.wrappers.semgrep_wrapper import SemgrepAnalyzer
+        
+        analyzer = SemgrepAnalyzer()
+        
+        # 분석 실행 (경량화된 결과 반환)
+        raw_results = analyzer.analyze(project_dir, language)
+        
+        # VulnerabilityResult로 변환
+        results = []
+        for r in raw_results:
+            try:
+                file_path = Path(r["file"]).relative_to(project_dir.parent)
+            except ValueError:
+                file_path = Path(r["file"])
+            
+            results.append(VulnerabilityResult(
+                file_path=file_path,
+                line=r["line"],
+                column=1,
+                rule_id=r["rule_id"],
+                message=f"{r['rule_name']}: {r['message']}",
+                severity=r["severity"],
+            ))
+        
+        logger.info(f"Semgrep 분석 완료 ({language}): {len(results)}개 발견")
+        return results
+        
+    except ImportError:
+        logger.warning("Semgrep wrapper를 찾을 수 없습니다. Semgrep 분석을 건너뜁니다.")
+        return []
+    except Exception as e:
+        logger.exception(f"Semgrep 분석 중 오류 발생 ({language}): {e}")
         return []
 
 
@@ -316,6 +347,11 @@ def analyze_project(project_dir: Path, languages: Set[str]) -> List[Vulnerabilit
                 logger.info(f"{language} 분석 실행 (Bandit 사용)")
                 bandit_results = analyze_with_bandit(project_dir)
                 all_results.extend(bandit_results)
+            
+            # 모든 언어에 대해 Semgrep도 추가로 실행 (경량 파서 사용)
+            logger.info(f"{language} 분석 실행 (Semgrep 사용)")
+            semgrep_results = analyze_with_semgrep(project_dir, language)
+            all_results.extend(semgrep_results)
         else:
             logger.warning(f"지원하지 않는 언어: {language}")
     

@@ -8,7 +8,7 @@ from typing import Literal
 
 from loguru import logger
 
-from ..utils.cmd import BaseCommander, DockerCommander
+from sarif_cli.core.cmd import BaseCommander
 
 # Configuration
 def _find_codeql_path():
@@ -89,11 +89,10 @@ def run(args, *, container_id: str | None = None, timeout: int | None = None):
     command = [codeql_path] + list(map(str, args))
 
     if container_id:
-        runner = DockerCommander(container_id=container_id)
-        res = runner.run(command, quiet=False, timeout=timeout)
-    else:
-        runner = BaseCommander()
-        res = runner.run(command, timeout=timeout)
+        logger.warning("Docker execution is not supported in this version. Running locally.")
+        
+    runner = BaseCommander()
+    res = runner.run(command, timeout=timeout)
 
     if res.returncode != 0:
         if res.returncode == -1:
@@ -109,10 +108,10 @@ def run(args, *, container_id: str | None = None, timeout: int | None = None):
 
 
 def get_query_path(language: Literal["c", "java"], name: str) -> Path:
-    with resources.path(f"sarif_cli.codeql.ql.{language}", name) as path:
+    with resources.path(f"sarif_cli.wrappers.codeql.ql.{language}", name) as path:
         return path
 
 
 def get_query_content(language: Literal["c", "java"], name: str) -> str:
-    with resources.open_text(f"sarif_cli.codeql.ql.{language}", name) as f:
+    with resources.open_text(f"sarif_cli.wrappers.codeql.ql.{language}", name) as f:
         return f.read()

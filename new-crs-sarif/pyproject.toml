@@ -23,6 +23,7 @@ dependencies = [
     "requests>=2.32.0",
     "flask",
     "bandit>=1.7.0",
+    "semgrep>=1.45.0",
 ]
 
 [tool.uv.sources]
