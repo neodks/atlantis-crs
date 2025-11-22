@@ -142,7 +142,7 @@ run_test \
 # JavaScript 테스트
 run_test \
     "JavaScript 언어 분석" \
-    "uv run python3 -m sarif_cli.cli -i $TEST_PROJECT/js -o $RESULTS_DIR/test-js" \
+    "uv run python3 -m sarif_cli.cli -i $TEST_PROJECT/javascript -o $RESULTS_DIR/test-js" \
     "$RESULTS_DIR/test-js/vulnerable.js.sarif"
 
 # 최종 결과
