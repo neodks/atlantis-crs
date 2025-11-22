@@ -55,16 +55,44 @@ def analyze_with_codeql(project_dir: Path, language: str) -> List[VulnerabilityR
         elif language in ["c", "cpp"]:
             c_files = list(project_dir.rglob("*.c"))
             cpp_files = list(project_dir.rglob("*.cpp"))
-            if c_files or cpp_files:
+            all_files = c_files + cpp_files
+            if all_files:
                 compiler = "g++" if cpp_files else "gcc"
-                # For simple C/C++ files, create an executable to ensure the build command succeeds and CodeQL can trace it.
-                build_command = f"{compiler} " + " ".join([str(f.relative_to(project_dir)) for f in c_files + cpp_files]) + " -o example"
+                # Compile files individually to avoid object file collisions and ensure CodeQL traces all of them
+                # Create a temporary build script to avoid quoting issues with sh -c
+                build_script_path = project_dir / "build_codeql.sh"
+                with open(build_script_path, "w") as f:
+                    f.write("#!/bin/bash\n")
+                    f.write("set -e\n") # Stop on error
+                    for file in all_files:
+                        rel_path = file.relative_to(project_dir)
+                        obj_file = str(rel_path).replace("/", "_") + ".o"
+                        f.write(f"{compiler} -c {str(rel_path)} -o {obj_file}\n")
+                
+                import os
+                os.chmod(build_script_path, 0o755)
+                
+                build_command = f"./{build_script_path.name}"
 
-        raw_results = codeql_wrapper.analyze(
-            project_dir=project_dir,
-            language=language,
-            build_command=build_command,
-        )
+        try:
+            raw_results = codeql_wrapper.analyze(
+                project_dir=project_dir,
+                language=language,
+                build_command=build_command,
+            )
+            import sys
+            print(f"DEBUG: {language} raw_results: {len(raw_results)}", file=sys.stderr)
+            for r in raw_results:
+                print(f"DEBUG: {language} result file: {r.get('file')}", file=sys.stderr)
+        finally:
+            # Clean up build script if it exists
+            if build_command and "build_codeql.sh" in str(build_command):
+                build_script_path = project_dir / "build_codeql.sh"
+                if build_script_path.exists():
+                    try:
+                        build_script_path.unlink()
+                    except Exception:
+                        pass
         
         results = []
         for r in raw_results:
@@ -104,8 +132,8 @@ def analyze_project(project_dir: Path, languages: Set[str]) -> List[Vulnerabilit
     """
     all_results = []
     
-    # Java는 SpotBugs, C/C++는 CodeQL 사용
-    codeql_languages = {"c", "cpp"}
+    # Java는 SpotBugs, C/C++/Python/JS는 CodeQL 사용
+    codeql_languages = {"c", "cpp", "python", "javascript"}
     
     for language in languages:
         if language in codeql_languages:

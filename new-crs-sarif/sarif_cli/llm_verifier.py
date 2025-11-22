@@ -13,7 +13,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 
 from sarif_cli.analyzer import VulnerabilityResult
-from sarif_cli import settings
+from sarif_cli.settings import config
 from sarif_cli.aux_analyser import AuxAnalyser
 
 
@@ -57,11 +57,11 @@ def verify_and_generate_patch(
         aux_result = aux_analyser.analyze_reachability(vulnerability.file_path, vulnerability.line)
         
         # 프롬프트 선택 및 로드
-        if settings.ENABLE_AUX_ANALYSIS:
-            prompt_file = settings.AUX_ENHANCED_PROMPT_FILE
+        if config.ENABLE_AUX:
+            prompt_file = config.AUX_ENHANCED_PROMPT_FILE
             logger.info(f"Aux Enhanced Prompt 사용: {prompt_file}")
         else:
-            prompt_file = settings.BASIC_PROMPT_FILE
+            prompt_file = config.BASIC_PROMPT_FILE
             logger.info(f"Basic Prompt 사용: {prompt_file}")
             
         try:
@@ -83,10 +83,10 @@ def verify_and_generate_patch(
         logger.info(f"LLM 검증 시작: {vulnerability.rule_id} at {vulnerability.file_path}:{vulnerability.line}")
         
         # 로컬 LLM (Ollama 등 OpenAI compatible API)
-        model_name = settings.OLLAMA_MODEL
+        model_name = config.OLLAMA_MODEL
         
         # Ollama는 /v1을 base_url에 포함해야 함
-        base_url = settings.LLM_URL
+        base_url = config.LLM_URL
         if not base_url.endswith("/v1"):
             base_url = f"{base_url}/v1"
         
@@ -118,7 +118,7 @@ def verify_and_generate_patch(
         }
         
         # Aux 정보가 필요한 경우 추가
-        if settings.ENABLE_AUX_ANALYSIS:
+        if config.ENABLE_AUX:
             input_vars["aux_reachable"] = "Yes" if aux_result.reachable else "No"
             input_vars["aux_call_stack"] = "\n".join(aux_result.call_stack)
             input_vars["aux_data_flow"] = "\n".join(aux_result.data_flow)

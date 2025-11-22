@@ -23,7 +23,7 @@ class Database(object):
         self.temp = temp
 
     def __del__(self):
-        if self.temp:
+        if getattr(self, 'temp', False):
             shutil.rmtree(self.path)
 
     def run_command(self, command: str, options: List = [], post: List = []):
@@ -78,10 +78,9 @@ class Database(object):
         if not path.is_dir():
             raise ValueError(f"Database is not a directory: {path}")
 
-        if (
-            not path.joinpath("db-java").exists()
-            and not path.joinpath("db-cpp").exists()
-            and not path.joinpath("db-c").exists()
+        if not any(
+            path.joinpath(f"db-{lang}").exists()
+            for lang in ["java", "cpp", "c", "python", "javascript"]
         ):
             raise ValueError(f"Database is not a CodeQL database: {path}")
 
@@ -89,7 +88,7 @@ class Database(object):
 
     @staticmethod
     def create(
-        language: Literal["cpp", "java", "c"],
+        language: Literal["cpp", "java", "c", "python", "javascript"],
         db_path: Path,
         src_path: Path,
         command: list | str | None = None,

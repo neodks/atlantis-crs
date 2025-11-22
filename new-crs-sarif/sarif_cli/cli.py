@@ -9,7 +9,7 @@ from loguru import logger
 
 from sarif_cli.detector import detect_languages
 from sarif_cli.analyzer import analyze_project
-from sarif_cli.settings import load_settings
+from sarif_cli.settings import config, load_settings
 
 app = typer.Typer()
 console = Console()
@@ -82,23 +82,19 @@ def main(
         raise typer.Exit(1)
     
     # 설정 로드 (CLI 인자 > 환경 변수 > .env 파일)
-    settings_obj = load_settings(
+    load_settings(
         enable_llm=enable_llm,
         llm_url=llm_url,
         llm_key=llm_key,
+        enable_aux=enable_aux,
     )
-    
-    # Aux 설정 업데이트
-    from sarif_cli import settings as global_settings
-    if enable_aux:
-        global_settings.ENABLE_AUX_ANALYSIS = True
     
     console.print(f"[bold green]🔍 SAST 분석 시작[/bold green]")
     console.print(f"입력: {input_dir}")
     console.print(f"출력: {output_dir}")
-    if settings_obj.enable_llm:
-        console.print(f"[cyan]LLM: 활성화 (URL: {settings_obj.llm_url or 'Not configured'})[/cyan]")
-        if global_settings.ENABLE_AUX_ANALYSIS:
+    if config.ENABLE_LLM:
+        console.print(f"[cyan]LLM: 활성화 (URL: {config.LLM_URL or 'Not configured'})[/cyan]")
+        if config.ENABLE_AUX:
             console.print(f"[cyan]Aux 분석: 활성화[/cyan]")
         else:
             console.print(f"[dim]Aux 분석: 비활성화[/dim]")
@@ -120,7 +116,7 @@ def main(
     
     # 4. LLM 검증 (설정에 따라)
     patches_map = {}
-    if settings_obj.enable_llm:
+    if config.ENABLE_LLM:
         console.print("\n[yellow]🤖 LLM 검증 및 패치 생성 중...[/yellow]")
         from sarif_cli.llm_verifier import verify_and_generate_patch
         
@@ -132,14 +128,18 @@ def main(
                 lang = "c" if ext == ".c" else "cpp"
             elif ext in [".java"]:
                 lang = "java"
+            elif ext in [".py"]:
+                lang = "python"
+            elif ext in [".js", ".jsx", ".ts", ".tsx"]:
+                lang = "javascript"
             
             # LLM 검증 및 패치 생성
             patch_result_dict = verify_and_generate_patch(
                 vulnerability=vuln,
                 project_dir=input_dir,
                 language=lang,
-                llm_url=settings_obj.llm_url,
-                api_key=settings_obj.llm_api_key
+                llm_url=config.LLM_URL,
+                api_key=config.LLM_API_KEY
             )
             
             # Dict를 PatchResult 객체로 변환 (호환성 유지)

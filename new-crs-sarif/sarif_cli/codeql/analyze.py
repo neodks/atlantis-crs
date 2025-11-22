@@ -54,3 +54,31 @@ def run_codeql_analysis(
                 "codeql/java-queries:codeql-suites/java-security-and-quality.qls",
             ],
         )
+    elif language == "python":
+        run(
+            [
+                "database",
+                "analyze",
+                str(db.path),
+                "--format=sarif-latest",
+                "--threads=" + str(int(nproc / 2)),
+                "--output",
+                str(output),
+                "--sarif-category=python",
+                "codeql/python-queries:codeql-suites/python-security-and-quality.qls",
+            ],
+        )
+    elif language == "javascript":
+        run(
+            [
+                "database",
+                "analyze",
+                str(db.path),
+                "--format=sarif-latest",
+                "--threads=" + str(int(nproc / 2)),
+                "--output",
+                str(output),
+                "--sarif-category=javascript",
+                "codeql/javascript-queries:codeql-suites/javascript-security-and-quality.qls",
+            ],
+        )

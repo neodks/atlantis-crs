@@ -27,7 +27,7 @@ class CodeQLWrapper:
     def analyze(
         self,
         project_dir: Path,
-        language: Literal["c", "cpp", "java"],
+        language: Literal["c", "cpp", "java", "python", "javascript"],
         build_command: str | List[str] | None = None,
     ) -> List[Dict[str, Any]]:
         """
@@ -35,7 +35,7 @@ class CodeQLWrapper:
 
         Args:
             project_dir: 분석할 소스 코드가 있는 프로젝트 디렉토리.
-            language: 분석할 언어 ("c", "cpp", "java").
+            language: 분석할 언어 ("c", "cpp", "java", "python", "javascript").
             build_command: 프로젝트 빌드 명령어 (선택 사항).
 
         Returns:

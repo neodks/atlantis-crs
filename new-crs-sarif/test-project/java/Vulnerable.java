@@ -1,15 +1,14 @@
-
 package java;
 
-public class Example {
+public class Vulnerable {
     public void execute() {
         String s = null;
-        // This will cause a null pointer exception
+        // Null pointer dereference vulnerability
         System.out.println(s.length());
     }
 
     public static void main(String[] args) {
-        Example example = new Example();
-        example.execute();
+        Vulnerable v = new Vulnerable();
+        v.execute();
     }
 }

@@ -3,7 +3,7 @@
 
 set -e
 
-CODEQL_VERSION="v2.19.4"
+CODEQL_VERSION="v2.23.5"
 INSTALL_DIR="$HOME/codeql-cli"
 QUERIES_DIR="$HOME/codeql-home"
 DOWNLOAD_URL="https://github.com/github/codeql-cli-binaries/releases/download/${CODEQL_VERSION}/codeql-linux64.zip"
@@ -83,6 +83,14 @@ if [ -f "$CODEQL_BIN" ]; then
     # Java 쿼리 팩
     echo "  - codeql/java-queries"
     "$CODEQL_BIN" pack download codeql/java-queries 2>/dev/null || echo "    (이미 설치됨 또는 다운로드 건너뜀)"
+
+    # Python 쿼리 팩
+    echo "  - codeql/python-queries"
+    "$CODEQL_BIN" pack download codeql/python-queries 2>/dev/null || echo "    (이미 설치됨 또는 다운로드 건너뜀)"
+
+    # JavaScript 쿼리 팩
+    echo "  - codeql/javascript-queries"
+    "$CODEQL_BIN" pack download codeql/javascript-queries 2>/dev/null || echo "    (이미 설치됨 또는 다운로드 건너뜀)"
     
     # 의존성 팩
     echo "  - codeql/suite-helpers"
