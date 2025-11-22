@@ -42,48 +42,21 @@ class AuxAnalyser:
             
         logger.info(f"Running Aux Analysis for {file_path}:{line} ({self.language})")
         
-        # TODO: Implement actual integration with SVF/SootUp
-        # For now, we perform a simple heuristic check or return a placeholder
+        logger.info(f"Running Aux Analysis for {file_path}:{line} ({self.language})")
         
-        # Placeholder logic:
-        # If the file contains "main" or "handler", we assume it's reachable.
         try:
-            abs_path = self.project_dir / file_path
-            if not abs_path.exists():
-                # Fallback for mis-calculated relative paths
-                abs_path = Path(file_path)
-                if not abs_path.is_absolute():
-                     logger.error(f"Aux analysis failed, file not found: {file_path}")
-                     return AuxAnalysisResult(reachable=False, call_stack=["File not found"], data_flow=[])
-
-            content = abs_path.read_text(errors='ignore')
-            lines = content.splitlines()
-            
-            if 0 <= line - 1 < len(lines):
-                target_line = lines[line - 1]
+            if self.language in ["c", "cpp"]:
+                from sarif_cli.core.aux_tools.svf_analyser import SVFAnalyser
+                analyser = SVFAnalyser(self.project_dir)
+                return analyser.analyze(file_path, line)
+            elif self.language == "java":
+                from sarif_cli.core.aux_tools.sootup_analyser import SootUpAnalyser
+                analyser = SootUpAnalyser(self.project_dir)
+                return analyser.analyze(file_path, line)
             else:
-                target_line = "unknown"
+                logger.warning(f"Aux analysis not supported for language: {self.language}")
+                return AuxAnalysisResult(False, ["Not supported"], [])
                 
-            reachable = False
-            call_stack = []
-            data_flow = []
-            
-            # Simple heuristic for demonstration
-            if "main" in content or "def " in content or "public " in content:
-                reachable = True
-                call_stack = ["main()", "process_request()", target_line.strip()]
-                data_flow = ["user_input -> request_body -> target_var"]
-            else:
-                reachable = False
-                call_stack = ["No path found"]
-                data_flow = ["No data flow"]
-                
-            return AuxAnalysisResult(
-                reachable=reachable,
-                call_stack=call_stack,
-                data_flow=data_flow
-            )
-            
         except Exception as e:
             logger.error(f"Aux analysis failed: {e}")
             return AuxAnalysisResult(
