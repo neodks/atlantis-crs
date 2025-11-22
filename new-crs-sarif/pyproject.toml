@@ -22,6 +22,7 @@ dependencies = [
     "psutil>=7.0.0",
     "requests>=2.32.0",
     "flask",
+    "bandit>=1.7.0",
 ]
 
 [tool.uv.sources]
