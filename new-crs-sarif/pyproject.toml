@@ -7,7 +7,7 @@ authors = [
 ]
 readme = "README.md"
 requires-python = ">=3.10,<3.14"
-
+dependencies = [
     "sarif",
     "typer>=0.15.0",
     "rich>=13.9.0",
@@ -21,6 +21,9 @@ requires-python = ">=3.10,<3.14"
     "tiktoken>=0.7.0",
     "psutil>=7.0.0",
     "requests>=2.32.0",
+    "flask",
+    "bandit>=1.7.0",
+    "semgrep>=1.45.0",
 ]
 
 [tool.uv.sources]
